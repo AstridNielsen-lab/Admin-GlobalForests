@@ -51,6 +51,8 @@ export default function TeamList() {
 
   const handleInvite = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!inviteEmail.trim()) return;
+
     setSendingInvite(true);
     setError('');
     setSuccess('');
@@ -65,26 +67,28 @@ export default function TeamList() {
     };
 
     try {
-      // Enviar email real
+      // Send invitation email
       await sendInvitationEmail({
         to_email: inviteEmail,
         from_name: 'GlobalForests Team',
-        message: `You have been invited to join the GlobalForests team. Please click the link below to accept the invitation and create your account.`
+        message: `You have been invited to join the GlobalForests team. Please click the link below to accept the invitation and create your account.\n\nhttps://globalforests.org/join?invite=${newMember.id}`
       });
 
-      // Atualizar estado local
+      // Update local state
       const updatedMembers = [...members, newMember];
       storeMembers(updatedMembers);
       setMembers(updatedMembers);
       setSuccess('Invitation sent successfully!');
       setInviteEmail('');
+      
+      // Clear form after short delay
       setTimeout(() => {
         setShowInviteForm(false);
         setSuccess('');
       }, 2000);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error inviting member:', error);
-      setError('Failed to send invitation. Please try again.');
+      setError(error.message || 'Failed to send invitation. Please try again.');
     } finally {
       setSendingInvite(false);
     }
@@ -120,7 +124,8 @@ export default function TeamList() {
               </div>
             )}
             {success && (
-              <div className="mb-4 p-3 bg-green-100 border border-green-400 text-green-700 rounded">
+              <div className="mb-4 p-3 bg-green-100 border border-green-400 text-green-700 rounded flex items-center">
+                <CheckCircle className="h-5 w-5 mr-2" />
                 {success}
               </div>
             )}
@@ -135,6 +140,7 @@ export default function TeamList() {
                 className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-green-500"
                 required
                 disabled={sendingInvite}
+                placeholder="Enter team member's email"
               />
               <p className="text-sm text-gray-500 mt-1">
                 Invitation will be sent from: {DEFAULT_ADMIN_EMAIL}
@@ -168,7 +174,7 @@ export default function TeamList() {
         </div>
       )}
 
-      {/* Lista de Membros Ativos */}
+      {/* Active Members List */}
       <div className="mb-8">
         <h3 className="text-lg font-semibold text-gray-700 mb-4">Active Members</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -198,7 +204,7 @@ export default function TeamList() {
         </div>
       </div>
 
-      {/* Lista de Convites Pendentes */}
+      {/* Pending Invitations List */}
       <div>
         <h3 className="text-lg font-semibold text-gray-700 mb-4">Pending Invitations</h3>
         <div className="bg-white rounded-lg shadow-md overflow-hidden">
