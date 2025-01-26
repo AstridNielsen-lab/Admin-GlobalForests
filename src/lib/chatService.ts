@@ -60,14 +60,17 @@ export async function generateBlogPost(messages: Message[]): Promise<{ title: st
 
 1. A clear, concise title (max 100 characters)
 2. Well-structured content with:
-   - Introduction
-   - Main discussion points
-   - Key insights and takeaways
+   - Introduction summarizing the main topic
+   - Key points from the discussion
+   - Important insights and takeaways
+   - Practical recommendations or next steps
    - Conclusion
 
 Format the response as:
 TITLE: [Your generated title]
 CONTENT: [Your generated content]
+
+Make sure the content is professional, engaging, and valuable for readers interested in forest conservation and environmental management.
 
 Conversation:
 ${conversation}`;

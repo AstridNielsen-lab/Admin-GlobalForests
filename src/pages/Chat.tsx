@@ -46,11 +46,12 @@ export default function Chat() {
       content: message,
       role: 'user',
       createdAt: new Date().toISOString(),
+      user_id: user.id
     };
 
     try {
       setMessages(prev => [...prev, userMessage]);
-      await saveMessage({ ...userMessage, user_id: user.id });
+      await saveMessage(userMessage);
       setMessage('');
 
       // Get AI response
@@ -60,13 +61,23 @@ export default function Chat() {
         content: aiResponse,
         role: 'assistant',
         createdAt: new Date().toISOString(),
+        user_id: user.id
       };
 
       setMessages(prev => [...prev, assistantMessage]);
-      await saveMessage({ ...assistantMessage, user_id: user.id });
+      await saveMessage(assistantMessage);
 
-      // If the conversation seems meaningful, suggest publishing
-      if (messages.length >= 4) {
+      // Show publish option after a meaningful conversation (4+ messages)
+      if (messages.length >= 3) {
+        const suggestPublishMessage: Message = {
+          id: crypto.randomUUID(),
+          content: "This conversation seems informative! Would you like to publish it as a blog post? Click the 'Publish to Blog' button above to share these insights with others.",
+          role: 'assistant',
+          createdAt: new Date().toISOString(),
+          user_id: user.id
+        };
+        setMessages(prev => [...prev, suggestPublishMessage]);
+        await saveMessage(suggestPublishMessage);
         setShowPublishConfirm(true);
       }
     } catch (error) {
@@ -93,10 +104,11 @@ export default function Chat() {
         content: "Your conversation has been successfully published as a blog post! You can view it in the blog section.",
         role: 'assistant',
         createdAt: new Date().toISOString(),
+        user_id: user.id
       };
       
       setMessages(prev => [...prev, successMessage]);
-      await saveMessage({ ...successMessage, user_id: user.id });
+      await saveMessage(successMessage);
       setShowPublishConfirm(false);
     } catch (error) {
       console.error('Error publishing blog post:', error);
@@ -105,6 +117,7 @@ export default function Chat() {
         content: "Sorry, there was an error publishing your conversation. Please try again.",
         role: 'assistant',
         createdAt: new Date().toISOString(),
+        user_id: user.id
       };
       setMessages(prev => [...prev, errorMessage]);
     } finally {
