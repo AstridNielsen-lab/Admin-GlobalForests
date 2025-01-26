@@ -1,48 +1,50 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { TreePine } from 'lucide-react';
-import { useAuthStore } from '../store/authStore';
+import { useAuth } from '../contexts/AuthContext';
+import { Trees, BookOpen, MessageSquare, Settings, LogOut } from 'lucide-react';
 
 export default function Navbar() {
-  const { user, signOut } = useAuthStore();
+  const { user, signOut } = useAuth();
 
   return (
-    <nav className="bg-white shadow-md">
+    <nav className="bg-green-700 text-white shadow-lg">
       <div className="container mx-auto px-4">
-        <div className="flex justify-between items-center h-16">
-          {/* Logo and Brand */}
+        <div className="flex items-center justify-between h-16">
           <Link to="/" className="flex items-center space-x-2">
-            <TreePine className="h-8 w-8 text-green-600" />
-            <span className="text-xl font-bold text-gray-800">GlobalForests</span>
+            <Trees className="h-8 w-8" />
+            <span className="font-bold text-xl">GlobalForests</span>
           </Link>
 
-          {/* Navigation Links */}
           <div className="flex items-center space-x-6">
-            <Link to="/" className="text-gray-600 hover:text-green-600">
-              Home
+            <Link to="/blog" className="flex items-center space-x-1 hover:text-green-200">
+              <BookOpen className="h-5 w-5" />
+              <span>Blog</span>
             </Link>
-            <Link to="/blog" className="text-gray-600 hover:text-green-600">
-              Blog
-            </Link>
-            
+
             {user ? (
               <>
-                <Link to="/dashboard" className="text-gray-600 hover:text-green-600">
-                  Dashboard
+                <Link to="/chat" className="flex items-center space-x-1 hover:text-green-200">
+                  <MessageSquare className="h-5 w-5" />
+                  <span>Chat</span>
+                </Link>
+                <Link to="/admin" className="flex items-center space-x-1 hover:text-green-200">
+                  <Settings className="h-5 w-5" />
+                  <span>Admin</span>
                 </Link>
                 <button
                   onClick={() => signOut()}
-                  className="text-gray-600 hover:text-green-600"
+                  className="flex items-center space-x-1 hover:text-green-200"
                 >
-                  Sign Out
+                  <LogOut className="h-5 w-5" />
+                  <span>Logout</span>
                 </button>
               </>
             ) : (
               <Link
                 to="/login"
-                className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700"
+                className="bg-white text-green-700 px-4 py-2 rounded-lg hover:bg-green-100 transition duration-200"
               >
-                Sign In
+                Login
               </Link>
             )}
           </div>
