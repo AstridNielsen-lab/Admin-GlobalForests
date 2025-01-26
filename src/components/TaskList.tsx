@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { supabase } from '../lib/supabase';
 import { Plus, Edit2, Trash2, CheckCircle, Clock, AlertCircle } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -12,12 +11,21 @@ interface Task {
   assigned_to: string;
 }
 
+// Local Storage helper functions
+const getStoredTasks = (): Task[] => {
+  const stored = localStorage.getItem('tasks');
+  return stored ? JSON.parse(stored) : [];
+};
+
+const storeTasks = (tasks: Task[]) => {
+  localStorage.setItem('tasks', JSON.stringify(tasks));
+};
+
 export default function TaskList() {
   const { user } = useAuth();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
-  const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [newTask, setNewTask] = useState({
     title: '',
     description: '',
@@ -31,15 +39,10 @@ export default function TaskList() {
     }
   }, [user]);
 
-  const loadTasks = async () => {
+  const loadTasks = () => {
     try {
-      const { data, error } = await supabase
-        .from('tasks')
-        .select('*')
-        .order('due_date', { ascending: true });
-
-      if (error) throw error;
-      setTasks(data || []);
+      const storedTasks = getStoredTasks();
+      setTasks(storedTasks.filter(task => task.assigned_to === user?.id));
     } catch (error) {
       console.error('Error loading tasks:', error);
     } finally {
@@ -52,48 +55,39 @@ export default function TaskList() {
     if (!user) return;
 
     try {
-      const taskData = {
+      const newTaskData: Task = {
+        id: crypto.randomUUID(),
         ...newTask,
         assigned_to: user.id
       };
 
-      const { error } = await supabase
-        .from('tasks')
-        .insert([taskData]);
-
-      if (error) throw error;
-
+      const updatedTasks = [...tasks, newTaskData];
+      storeTasks(updatedTasks);
+      setTasks(updatedTasks);
       setShowForm(false);
       setNewTask({ title: '', description: '', due_date: '', status: 'pending' });
-      await loadTasks();
     } catch (error) {
       console.error('Error creating task:', error);
     }
   };
 
-  const handleUpdateTask = async (taskId: string, newStatus: 'pending' | 'completed' | 'overdue') => {
+  const handleUpdateTask = (taskId: string, newStatus: 'pending' | 'completed' | 'overdue') => {
     try {
-      const { error } = await supabase
-        .from('tasks')
-        .update({ status: newStatus })
-        .eq('id', taskId);
-
-      if (error) throw error;
-      await loadTasks();
+      const updatedTasks = tasks.map(task => 
+        task.id === taskId ? { ...task, status: newStatus } : task
+      );
+      storeTasks(updatedTasks);
+      setTasks(updatedTasks);
     } catch (error) {
       console.error('Error updating task:', error);
     }
   };
 
-  const handleDeleteTask = async (taskId: string) => {
+  const handleDeleteTask = (taskId: string) => {
     try {
-      const { error } = await supabase
-        .from('tasks')
-        .delete()
-        .eq('id', taskId);
-
-      if (error) throw error;
-      await loadTasks();
+      const updatedTasks = tasks.filter(task => task.id !== taskId);
+      storeTasks(updatedTasks);
+      setTasks(updatedTasks);
     } catch (error) {
       console.error('Error deleting task:', error);
     }
