@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { UserPlus, Mail, User as UserIcon, CheckCircle } from 'lucide-react';
+import { UserPlus, Mail, User as UserIcon, CheckCircle, AlertCircle } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { sendInvitationEmail } from '../lib/emailService';
 
@@ -51,7 +51,7 @@ export default function TeamList() {
 
   const handleInvite = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!inviteEmail.trim()) return;
+    if (!inviteEmail.trim() || !user) return;
 
     setSendingInvite(true);
     setError('');
@@ -59,7 +59,7 @@ export default function TeamList() {
     
     const newMember: TeamMember = {
       id: crypto.randomUUID(),
-      email: inviteEmail,
+      email: inviteEmail.trim(),
       full_name: '',
       role: 'member',
       status: 'pending',
@@ -71,7 +71,7 @@ export default function TeamList() {
       await sendInvitationEmail({
         to_email: inviteEmail,
         from_name: 'GlobalForests Team',
-        message: `You have been invited to join the GlobalForests team. Please click the link below to accept the invitation and create your account.\n\nhttps://globalforests.org/join?invite=${newMember.id}`
+        message: `You have been invited to join the GlobalForests team by ${user.email}.\n\nPlease click the link below to accept the invitation and create your account:\n\nhttps://globalforests.org/join?invite=${newMember.id}`
       });
 
       // Update local state
@@ -88,7 +88,7 @@ export default function TeamList() {
       }, 2000);
     } catch (error: any) {
       console.error('Error inviting member:', error);
-      setError(error.message || 'Failed to send invitation. Please try again.');
+      setError(error.message);
     } finally {
       setSendingInvite(false);
     }
@@ -119,14 +119,15 @@ export default function TeamList() {
         <div className="bg-white p-6 rounded-lg shadow-md mb-6">
           <form onSubmit={handleInvite}>
             {error && (
-              <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
-                {error}
+              <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded flex items-center">
+                <AlertCircle className="h-5 w-5 mr-2 flex-shrink-0" />
+                <span>{error}</span>
               </div>
             )}
             {success && (
               <div className="mb-4 p-3 bg-green-100 border border-green-400 text-green-700 rounded flex items-center">
                 <CheckCircle className="h-5 w-5 mr-2" />
-                {success}
+                <span>{success}</span>
               </div>
             )}
             <div>
@@ -158,7 +159,7 @@ export default function TeamList() {
               <button
                 type="submit"
                 className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition duration-200 disabled:opacity-50 flex items-center space-x-2"
-                disabled={sendingInvite}
+                disabled={sendingInvite || !inviteEmail.trim()}
               >
                 {sendingInvite ? (
                   <>
