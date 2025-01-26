@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import { useAuth } from '../contexts/AuthContext';
 
 interface BlogPostFormProps {
   onClose: () => void;
@@ -8,6 +9,7 @@ interface BlogPostFormProps {
 }
 
 export default function BlogPostForm({ onClose, onSuccess }: BlogPostFormProps) {
+  const { user } = useAuth();
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [loading, setLoading] = useState(false);
@@ -15,6 +17,11 @@ export default function BlogPostForm({ onClose, onSuccess }: BlogPostFormProps) 
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!user) {
+      setError('You must be logged in to create a post');
+      return;
+    }
+    
     setLoading(true);
     setError('');
 
@@ -25,6 +32,7 @@ export default function BlogPostForm({ onClose, onSuccess }: BlogPostFormProps) 
           {
             title,
             content,
+            author_id: user.id
           }
         ]);
 
