@@ -1,13 +1,15 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { Send, Loader2 } from 'lucide-react';
-import { Message, sendMessageToAI, saveMessage, getMessages } from '../lib/chatService';
+import { Send, Loader2, BookOpen } from 'lucide-react';
+import { Message, sendMessageToAI, saveMessage, getMessages, generateBlogPost, publishBlogPost } from '../lib/chatService';
 
 export default function Chat() {
   const { user } = useAuth();
   const [message, setMessage] = useState('');
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isPublishing, setIsPublishing] = useState(false);
+  const [showPublishConfirm, setShowPublishConfirm] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -62,10 +64,51 @@ export default function Chat() {
 
       setMessages(prev => [...prev, assistantMessage]);
       await saveMessage({ ...assistantMessage, user_id: user.id });
+
+      // If the conversation seems meaningful, suggest publishing
+      if (messages.length >= 4) {
+        setShowPublishConfirm(true);
+      }
     } catch (error) {
       console.error('Error sending message:', error);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handlePublishToBlog = async () => {
+    if (!user || messages.length === 0 || isPublishing) return;
+
+    setIsPublishing(true);
+    try {
+      // Generate blog post content from the conversation
+      const { title, content } = await generateBlogPost(messages);
+      
+      // Publish the blog post
+      await publishBlogPost(title, content, user.id);
+      
+      // Show success message
+      const successMessage: Message = {
+        id: crypto.randomUUID(),
+        content: "Your conversation has been successfully published as a blog post! You can view it in the blog section.",
+        role: 'assistant',
+        createdAt: new Date().toISOString(),
+      };
+      
+      setMessages(prev => [...prev, successMessage]);
+      await saveMessage({ ...successMessage, user_id: user.id });
+      setShowPublishConfirm(false);
+    } catch (error) {
+      console.error('Error publishing blog post:', error);
+      const errorMessage: Message = {
+        id: crypto.randomUUID(),
+        content: "Sorry, there was an error publishing your conversation. Please try again.",
+        role: 'assistant',
+        createdAt: new Date().toISOString(),
+      };
+      setMessages(prev => [...prev, errorMessage]);
+    } finally {
+      setIsPublishing(false);
     }
   };
 
@@ -80,9 +123,25 @@ export default function Chat() {
   return (
     <div className="max-w-4xl mx-auto">
       <div className="bg-white rounded-lg shadow-md h-[70vh] flex flex-col">
-        <div className="p-4 border-b">
-          <h2 className="text-xl font-semibold">AI Assistant Chat</h2>
-          <p className="text-sm text-gray-600">Ask questions about team management, forest conservation, or get help with administrative tasks.</p>
+        <div className="p-4 border-b flex justify-between items-center">
+          <div>
+            <h2 className="text-xl font-semibold">AI Assistant Chat</h2>
+            <p className="text-sm text-gray-600">Ask questions about team management, forest conservation, or get help with administrative tasks.</p>
+          </div>
+          {showPublishConfirm && (
+            <button
+              onClick={handlePublishToBlog}
+              disabled={isPublishing || messages.length === 0}
+              className="flex items-center space-x-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition duration-200 disabled:opacity-50"
+            >
+              {isPublishing ? (
+                <Loader2 className="h-5 w-5 animate-spin" />
+              ) : (
+                <BookOpen className="h-5 w-5" />
+              )}
+              <span>Publish to Blog</span>
+            </button>
+          )}
         </div>
 
         <div className="flex-1 p-4 overflow-y-auto">
