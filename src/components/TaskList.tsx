@@ -1,30 +1,35 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { Plus, Edit2, Trash2, CheckCircle, Clock, AlertCircle } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
 
 interface Task {
   id: string;
   title: string;
   description: string;
-  status: string;
+  status: 'pending' | 'completed' | 'overdue';
   due_date: string;
   assigned_to: string;
 }
 
 export default function TaskList() {
+  const { user } = useAuth();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [newTask, setNewTask] = useState({
     title: '',
     description: '',
     due_date: '',
-    status: 'pending'
+    status: 'pending' as const
   });
 
   useEffect(() => {
-    loadTasks();
-  }, []);
+    if (user) {
+      loadTasks();
+    }
+  }, [user]);
 
   const loadTasks = async () => {
     try {
@@ -44,17 +49,53 @@ export default function TaskList() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!user) return;
+
+    try {
+      const taskData = {
+        ...newTask,
+        assigned_to: user.id
+      };
+
+      const { error } = await supabase
+        .from('tasks')
+        .insert([taskData]);
+
+      if (error) throw error;
+
+      setShowForm(false);
+      setNewTask({ title: '', description: '', due_date: '', status: 'pending' });
+      await loadTasks();
+    } catch (error) {
+      console.error('Error creating task:', error);
+    }
+  };
+
+  const handleUpdateTask = async (taskId: string, newStatus: 'pending' | 'completed' | 'overdue') => {
     try {
       const { error } = await supabase
         .from('tasks')
-        .insert([newTask]);
+        .update({ status: newStatus })
+        .eq('id', taskId);
 
       if (error) throw error;
-      setShowForm(false);
-      setNewTask({ title: '', description: '', due_date: '', status: 'pending' });
-      loadTasks();
+      await loadTasks();
     } catch (error) {
-      console.error('Error creating task:', error);
+      console.error('Error updating task:', error);
+    }
+  };
+
+  const handleDeleteTask = async (taskId: string) => {
+    try {
+      const { error } = await supabase
+        .from('tasks')
+        .delete()
+        .eq('id', taskId);
+
+      if (error) throw error;
+      await loadTasks();
+    } catch (error) {
+      console.error('Error deleting task:', error);
     }
   };
 
@@ -131,6 +172,20 @@ export default function TaskList() {
                   required
                 />
               </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Status
+                </label>
+                <select
+                  value={newTask.status}
+                  onChange={(e) => setNewTask({ ...newTask, status: e.target.value as 'pending' | 'completed' | 'overdue' })}
+                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-green-500"
+                >
+                  <option value="pending">Pending</option>
+                  <option value="completed">Completed</option>
+                  <option value="overdue">Overdue</option>
+                </select>
+              </div>
             </div>
             <div className="mt-4 flex justify-end space-x-3">
               <button
@@ -174,7 +229,12 @@ export default function TaskList() {
               {tasks.map((task) => (
                 <tr key={task.id} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap">
-                    {getStatusIcon(task.status)}
+                    <button 
+                      onClick={() => handleUpdateTask(task.id, task.status === 'completed' ? 'pending' : 'completed')}
+                      className="hover:opacity-75 transition-opacity"
+                    >
+                      {getStatusIcon(task.status)}
+                    </button>
                   </td>
                   <td className="px-6 py-4">
                     <div className="text-sm font-medium text-gray-900">{task.title}</div>
@@ -185,10 +245,10 @@ export default function TaskList() {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     <div className="flex space-x-3">
-                      <button className="text-blue-600 hover:text-blue-900">
-                        <Edit2 className="h-5 w-5" />
-                      </button>
-                      <button className="text-red-600 hover:text-red-900">
+                      <button 
+                        onClick={() => handleDeleteTask(task.id)}
+                        className="text-red-600 hover:text-red-900"
+                      >
                         <Trash2 className="h-5 w-5" />
                       </button>
                     </div>
